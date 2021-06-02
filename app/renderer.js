@@ -1,4 +1,6 @@
 const marked = require('marked')
+const { remote, ipcRenderer } = require('electron')
+const mainProcess = remote.require('./main.js')
 
 //view
 const markdownView = document.querySelector('#markdown')
@@ -19,6 +21,21 @@ const renderMarkdownToHtml = markdown => {
     htmlView.innerHTML = marked(markdown, { sanitize: true })
 }
 
+
+////// events ////////
 markdownView.addEventListener('keyup', e => {
     renderMarkdownToHtml(e.target.value)
+})
+
+openFileBtn.addEventListener('click', () => {
+    mainProcess.getFileFromUser(remote.getCurrentWindow())   //调用主进程方法
+})
+
+ipcRenderer.on('file-opened', (event, file, content) => {
+    markdownView.value = content
+    renderMarkdownToHtml(content)
+})
+
+newFileBtn.addEventListener('click',()=>{
+    mainProcess.createWindow()
 })
