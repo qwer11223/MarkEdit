@@ -1,11 +1,26 @@
 const marked = require('marked')
 const { remote, ipcRenderer } = require('electron')
+const { Menu } = remote
 const mainProcess = remote.require('./main.js')
 const path = require('path')
 
 const currentWindow = remote.getCurrentWindow() //当前窗口
 let filePath = null //文件路径
 let originalContent = ''    //文件原内容
+
+const markdownContentMenu = Menu.buildFromTemplate([
+    {
+        label: 'Open File',
+        click() {
+            mainProcess.getFileFromUser()
+        }
+    },
+    { type: 'separator' },
+    { label: 'Cut', role: 'cut' },
+    { label: 'Copy', role: 'copy' },
+    { label: 'Paste', role: 'paste' },
+    { label: 'Select All', role: 'selectall' }
+])
 
 //view
 const markdownView = document.querySelector('#markdown')
@@ -59,18 +74,6 @@ const fileTypeIsSupported = file => {
 
 
 ////// events ////////
-markdownView.addEventListener('keyup', e => {
-    const currentContent = e.target.value
-
-    renderMarkdownToHtml(e.target.value)
-    updateUserInterface(currentContent != originalContent)
-
-})
-
-openFileBtn.addEventListener('click', () => {
-    mainProcess.getFileFromUser(currentWindow)   //调用主进程方法
-})
-
 ipcRenderer.on('file-opened', (event, file, content) => {
     filePath = file //将当前所打开的文件路径保存到全局变量
     originalContent = content   //将原始内容保存到全局变量，检测文件是否修改
@@ -79,6 +82,32 @@ ipcRenderer.on('file-opened', (event, file, content) => {
     renderMarkdownToHtml(content)   //渲染到markdown区域
 
     updateUserInterface()
+})
+
+ipcRenderer.on('save-markdown', () => {
+    mainProcess.saveMarkdown(currentWindow, filePath, markdownView.value)
+})
+
+ipcRenderer.on('save-html', () => {
+    mainProcess.saveHtml(currentWindow, filePath, htmlView.innerHTML)
+})
+
+
+markdownView.addEventListener('keyup', e => {
+    const currentContent = e.target.value
+
+    renderMarkdownToHtml(e.target.value)
+    updateUserInterface(currentContent != originalContent)
+
+})
+
+markdownView.addEventListener('contextmenu', e => {
+    e.preventDefault()
+    markdownContentMenu.popup()
+})
+
+openFileBtn.addEventListener('click', () => {
+    mainProcess.getFileFromUser(currentWindow)   //调用主进程方法
 })
 
 newFileBtn.addEventListener('click', () => {

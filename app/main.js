@@ -1,4 +1,5 @@
-const { app, BrowserWindow, dialog } = require('electron')
+const { app, BrowserWindow, dialog, Menu } = require('electron')
+const applicationMenu = require('./application-menu')
 const fs = require('fs')
 
 //多窗口集合
@@ -7,6 +8,7 @@ const windows = new Set()   //es2015,集合，不允许重复项
 const openFiles = new Map() //窗口-文件监控器 键值对
 
 app.on('ready', () => {
+    Menu.setApplicationMenu(applicationMenu)
     createWindow()
 })
 
@@ -97,7 +99,7 @@ const openFile = (targetWindow, file) => {
     const content = fs.readFileSync(file, { encoding: 'utf-8' }).toString()
     app.addRecentDocument(file) //添加文件到系统最近打开列表中
     targetWindow.webContents.send('file-opened', file, content)
-    startWatchingFile(targetWindow,file)
+    startWatchingFile(targetWindow, file)
 }
 
 //保存为html
