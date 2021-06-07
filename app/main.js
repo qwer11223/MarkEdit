@@ -1,5 +1,5 @@
 const { app, BrowserWindow, dialog, Menu } = require('electron')
-const applicationMenu = require('./application-menu')
+const createApplicationMenu = require('./application-menu')
 const fs = require('fs')
 
 //多窗口集合
@@ -8,7 +8,7 @@ const windows = new Set()   //es2015,集合，不允许重复项
 const openFiles = new Map() //窗口-文件监控器 键值对
 
 app.on('ready', () => {
-    Menu.setApplicationMenu(applicationMenu)
+    createApplicationMenu()
     createWindow()
 })
 
@@ -52,6 +52,8 @@ const createWindow = () => {
         newWindow.show()
     })
 
+    newWindow.on('focus', createApplicationMenu)
+
     newWindow.on('close', e => {
         if (newWindow.isDocumentEdited())
             e.preventDefault()
@@ -73,6 +75,7 @@ const createWindow = () => {
 
     newWindow.on('closed', () => { //窗口关闭后，设置渲染进程对象为null
         windows.delete(newWindow)
+        createApplicationMenu()
         stopWatchingFile(newWindow) //窗口关闭后同时关闭与窗口关联的文件监控器
         newWindow = null
     })
@@ -99,6 +102,7 @@ const openFile = (targetWindow, file) => {
     const content = fs.readFileSync(file, { encoding: 'utf-8' }).toString()
     app.addRecentDocument(file) //添加文件到系统最近打开列表中
     targetWindow.webContents.send('file-opened', file, content)
+    createApplicationMenu()
     startWatchingFile(targetWindow, file)
 }
 

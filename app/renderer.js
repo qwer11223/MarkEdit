@@ -1,5 +1,5 @@
 const marked = require('marked')
-const { remote, ipcRenderer } = require('electron')
+const { remote, ipcRenderer, shell } = require('electron')
 const { Menu } = remote
 const mainProcess = remote.require('./main.js')
 const path = require('path')
@@ -8,19 +8,31 @@ const currentWindow = remote.getCurrentWindow() //当前窗口
 let filePath = null //文件路径
 let originalContent = ''    //文件原内容
 
-const markdownContentMenu = Menu.buildFromTemplate([
-    {
-        label: 'Open File',
-        click() {
-            mainProcess.getFileFromUser()
-        }
-    },
-    { type: 'separator' },
-    { label: 'Cut', role: 'cut' },
-    { label: 'Copy', role: 'copy' },
-    { label: 'Paste', role: 'paste' },
-    { label: 'Select All', role: 'selectall' }
-])
+const createContextMenu = () => {
+    return Menu.buildFromTemplate([
+        {
+            label: 'Open File',
+            click(item, focuseWindow) {
+                mainProcess.getFileFromUser(focuseWindow)
+            }
+        },
+        {
+            label: 'Show File',
+            click() { showFile() },
+            enabled: !!filePath
+        },
+        {
+            label: 'Open in Default Editor',
+            click() { showItem() },
+            enabled: !!filePath
+        },
+        { type: 'separator' },
+        { label: 'Cut', role: 'cut' },
+        { label: 'Copy', role: 'copy' },
+        { label: 'Paste', role: 'paste' },
+        { label: 'Select All', role: 'selectall' }
+    ])
+}
 
 //view
 const markdownView = document.querySelector('#markdown')
@@ -64,6 +76,14 @@ const updateUserInterface = (isEdit) => {     //修改标题
     revertBtn.disabled = !isEdit
 }
 
+const showFile = () => {
+    shell.showItemInFolder(filePath)
+}
+
+const showItem = () => {
+    shell.openItem(filePath)
+}
+
 //  get drag/drop file
 const getDraggedFile = e => e.dataTransfer.items[0]
 const getDroppedFile = e => e.dataTransfer.files[0]
@@ -81,6 +101,9 @@ ipcRenderer.on('file-opened', (event, file, content) => {
     markdownView.value = content    //覆盖textarea区域内容
     renderMarkdownToHtml(content)   //渲染到markdown区域
 
+    showFileBtn.disabled = false
+    openInDefaultBtn.disabled = false
+
     updateUserInterface()
 })
 
@@ -92,6 +115,9 @@ ipcRenderer.on('save-html', () => {
     mainProcess.saveHtml(currentWindow, filePath, htmlView.innerHTML)
 })
 
+ipcRenderer.on('show-file', showFile)
+
+ipcRenderer.on('open-in-default', showItem)
 
 markdownView.addEventListener('keyup', e => {
     const currentContent = e.target.value
@@ -103,7 +129,7 @@ markdownView.addEventListener('keyup', e => {
 
 markdownView.addEventListener('contextmenu', e => {
     e.preventDefault()
-    markdownContentMenu.popup()
+    createContextMenu().popup()
 })
 
 openFileBtn.addEventListener('click', () => {
@@ -124,6 +150,8 @@ saveMarkdownBtn.addEventListener('click', () => {
 
 revertBtn.addEventListener('click', () => {
     markdownView.value = originalContent
+    saveMarkdownBtn.disabled = true
+    revertBtn.disabled = true
     renderMarkdownToHtml(originalContent)
 })
 
@@ -151,4 +179,12 @@ markdownView.addEventListener('drop', e => {
 
     markdownView.classList.remove('drag-over')
     markdownView.classList.remove('drag-error')
+})
+
+showFileBtn.addEventListener('click', () => {
+    showFile()
+})
+
+openInDefaultBtn.addEventListener('click', () => {
+    openItem()
 })
