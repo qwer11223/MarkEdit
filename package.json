@@ -1,10 +1,12 @@
 {
   "name": "electron",
   "version": "1.0.0",
+  "productName": "MarkEdit",
   "description": "",
   "main": "./app/main.js",
   "scripts": {
     "start": "electron .",
+    "build-win": "electron-packager . --overwrite --icon=icons/edit128.ico --platform=win32 --asar",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,5 +15,8 @@
   "dependencies": {
     "electron": "^13.0.1",
     "marked": "^2.0.6"
+  },
+  "devDependencies": {
+    "electron-packager": "^15.2.0"
   }
 }
